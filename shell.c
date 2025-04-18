@@ -12,21 +12,23 @@
  */
 int main(void)
 {
-	char *line;
-	char **args;
+	char *line, **args;
 	int status;
+	int interactive = isatty(STDIN_FILENO);
 
 	while (1)
 	{
-		/* display prompt */
-		if (write(STDOUT_FILENO, "$ ", 2) == -1)
-			exit(EXIT_FAILURE);
+		/* display prompt only in interactive mode */
+		if (interactive)
+			if (write(STDOUT_FILENO, "$ ", 2) == -1)
+				exit(EXIT_FAILURE);
 
 		line = read_line();
 		if (line == NULL)
 		{
-			/* handle EOF (Ctrl+D) */
-			write(STDOUT_FILENO, "\n", 1);
+			/* handle EOF (Ctrl+D) in interactive mode */
+			if (interactive)
+				write(STDOUT_FILENO, "\n", 1);
 			break;
 		}
 
@@ -152,7 +154,7 @@ int execute(char **args)
 		exit(EXIT_FAILURE);
 	}
 
-	/* parent waits for child to finish */
+	/* parent waits for child */
 	waitpid(pid, &status, 0);
 	if (WIFEXITED(status))
 		return (WEXITSTATUS(status));
