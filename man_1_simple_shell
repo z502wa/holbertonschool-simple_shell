@@ -1,0 +1,48 @@
+.\" Manpage for simple_shell
+.TH SIMPLE_SHELL 1 "April 2025" "simple_shell 1.0" "User Commands"
+.SH NAME
+simple_shell \- a simple UNIX command interpreter
+.SH SYNOPSIS
+.B simple_shell
+[\fIOPTION\fR]
+.SH DESCRIPTION
+.B simple_shell
+is a minimal shell implementing basic features of \fBin/sh\fR:
+.IP "\- Interactive mode"
+Read commands from standard input and execute them.
+.IP "\- Non-interactive mode"
+Read commands from a file or pipe and execute them.
+.SH OPTIONS
+.TP
+.B none
+No options supported in this version.
+.SH USAGE
+.IP
+Run without arguments in interactive mode:
+.RS
+.nf
+\$ ./simple_shell
+(\$) /bin/ls
+file1 file2
+(\$) exit
+.fi
+.RE
+.IP
+Run with piped input:
+.RS
+.nf
+\$ echo "/bin/ls" | ./simple_shell
+file1 file2
+.fi
+.RE
+.SH EXIT STATUS
+Returns the exit status of the last command executed, or 0 on success.
+.SH AUTHORS
+Project developed by Holberton School students:
+.RS
+.nf
+See AUTHORS file.
+.fi
+.RE
+.SH COPYRIGHT
+Public domain.
