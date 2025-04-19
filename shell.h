@@ -1,21 +1,19 @@
 #ifndef SHELL_H
 #define SHELL_H
 
-#include <stddef.h>
-
-/* External environment variable */
+/* external environment variable */
 extern char **environ;
 
-/* Read a line from stdin */
+/* read a line from stdin */
 char *read_line(void);
 
-/* Remove trailing newline from string */
-char *trim_newline(char *str);
-
-/* Split line into array of arguments */
+/* split line into array of args (trims newline) */
 char **split_line(char *line);
 
-/* Fork and execute the parsed command */
+/* search for cmd in PATH, return full path or NULL */
+char *find_path(char *cmd);
+
+/* fork and exec the given command */
 int execute(char **args);
 
 #endif /* SHELL_H */
