@@ -5,15 +5,23 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
+static char *shell_name;
+static int line_count;
+
 /**
  * main - entry point for simple_shell
+ * @argc: argument count
+ * @argv: argument vector
  * Return: exit status
  */
-int main(void)
+int main(int argc, char **argv)
 {
 	int interactive = isatty(STDIN_FILENO);
 	char *line, **args;
-	int status;
+	int status = 0;
+
+	shell_name = argv[0];
+	line_count = 0;
 
 	while (1)
 	{
@@ -30,25 +38,24 @@ int main(void)
 		}
 
 		args = split_line(line);
+		free(line);
 		if (!args[0])
 		{
 			free(args);
-			free(line);
 			continue;
 		}
 
+		line_count++;
 		status = execute(args);
 		free(args);
-		free(line);
-		(void)status;
 	}
 
-	return (0);
+	return (interactive ? 0 : status);
 }
 
 /**
  * read_line - read input line
- * Return: buffer or NULL on EOF
+ * Return: buffer (must be freed) or NULL on EOF
  */
 char *read_line(void)
 {
@@ -65,9 +72,9 @@ char *read_line(void)
 }
 
 /**
- * split_line - split line into tokens by whitespace
- * @line: input line
- * Return: NULL-terminated array
+ * split_line - split a line into tokens
+ * @line: input string
+ * Return: NULL-terminated array of tokens
  */
 char **split_line(char *line)
 {
@@ -96,9 +103,9 @@ char **split_line(char *line)
 }
 
 /**
- * find_path - locate cmd in PATH without getenv
+ * find_path - locate a command in PATH without getenv
  * @cmd: program name
- * Return: full path or NULL
+ * Return: malloc’d full path or NULL if not found
  */
 char *find_path(char *cmd)
 {
@@ -132,7 +139,7 @@ char *find_path(char *cmd)
 		strcpy(full, dir);
 		strcat(full, "/");
 		strcat(full, cmd);
-		if (!access(full, X_OK))
+		if (access(full, X_OK) == 0)
 		{
 			free(dup);
 			return (full);
@@ -145,20 +152,32 @@ char *find_path(char *cmd)
 }
 
 /**
- * execute - run command via fork and execve
- * @args: args array
- * Return: child exit status or -1
+ * execute - fork and exec a command with args
+ * @args: NULL-terminated args array
+ * Return: child exit status or 127 if not found
  */
 int execute(char **args)
 {
 	pid_t pid;
-	int st;
-	char *path = strchr(args[0], '/') ? args[0] : find_path(args[0]);
+	int st, ok;
+	char *path;
 
-	if (!path || (strchr(args[0], '/') && access(path, X_OK)))
+	if (strchr(args[0], '/') != NULL)
 	{
-		fprintf(stderr, "%s: not found\n", args[0]);
-		return (-1);
+		path = args[0];
+		ok = (access(path, X_OK) == 0);
+	}
+	else
+	{
+		path = find_path(args[0]);
+		ok = (path != NULL);
+	}
+
+	if (!ok)
+	{
+		fprintf(stderr, "%s: %d: %s: not found\n",
+				shell_name, line_count, args[0]);
+		return (127);
 	}
 
 	pid = fork();
@@ -169,12 +188,13 @@ int execute(char **args)
 			free(path);
 		return (-1);
 	}
-	if (!pid)
+	if (pid == 0)
 	{
 		execve(path, args, environ);
 		perror(path);
 		exit(EXIT_FAILURE);
 	}
+
 	waitpid(pid, &st, 0);
 	if (path != args[0])
 		free(path);
