@@ -17,7 +17,7 @@ int main(void)
 
 	while (1)
 	{
-		/* prompt only in interactive mode */
+		/* display prompt only in interactive mode */
 		if (interactive)
 			if (write(STDOUT_FILENO, "$ ", 2) == -1)
 				exit(EXIT_FAILURE);
@@ -32,15 +32,16 @@ int main(void)
 		}
 
 		args = split_line(line);
-		free(line);
 		if (args[0] == NULL)
 		{
 			free(args);
+			free(line);
 			continue;
 		}
 
 		status = execute(args);
 		free(args);
+		free(line);
 		(void)status;
 	}
 
