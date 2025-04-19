@@ -10,8 +10,8 @@ static int line_count;
 
 /**
  * main - entry point for simple_shell
- * @argc: argument count
- * @argv: argument vector
+ * @argc: arg count
+ * @argv: arg vector
  * Return: exit status
  */
 int main(int argc, char **argv)
@@ -55,7 +55,7 @@ int main(int argc, char **argv)
 
 /**
  * read_line - read input line
- * Return: buffer (must be freed) or NULL on EOF
+ * Return: buffer or NULL on EOF
  */
 char *read_line(void)
 {
@@ -72,9 +72,9 @@ char *read_line(void)
 }
 
 /**
- * split_line - split a line into tokens
- * @line: input string
- * Return: NULL-terminated array of tokens
+ * split_line - split line into tokens by whitespace
+ * @line: input line
+ * Return: NULL-terminated array
  */
 char **split_line(char *line)
 {
@@ -103,9 +103,9 @@ char **split_line(char *line)
 }
 
 /**
- * find_path - locate a command in PATH without getenv
+ * find_path - locate cmd in PATH without getenv
  * @cmd: program name
- * Return: malloc’d full path or NULL if not found
+ * Return: full path or NULL
  */
 char *find_path(char *cmd)
 {
@@ -152,32 +152,35 @@ char *find_path(char *cmd)
 }
 
 /**
- * execute - fork and exec a command with args
- * @args: NULL-terminated args array
+ * execute - run command via fork and execve
+ * @args: args array
  * Return: child exit status or 127 if not found
  */
 int execute(char **args)
 {
 	pid_t pid;
-	int st, ok;
+	int st;
 	char *path;
 
-	if (strchr(args[0], '/') != NULL)
+	if (strchr(args[0], '/'))
 	{
 		path = args[0];
-		ok = (access(path, X_OK) == 0);
+		if (access(path, X_OK) != 0)
+		{
+			fprintf(stderr, "%s: %d: %s: not found\n",
+				shell_name, line_count, args[0]);
+			return (127);
+		}
 	}
 	else
 	{
 		path = find_path(args[0]);
-		ok = (path != NULL);
-	}
-
-	if (!ok)
-	{
-		fprintf(stderr, "%s: %d: %s: not found\n",
+		if (!path)
+		{
+			fprintf(stderr, "%s: %d: %s: not found\n",
 				shell_name, line_count, args[0]);
-		return (127);
+			return (127);
+		}
 	}
 
 	pid = fork();
@@ -194,7 +197,6 @@ int execute(char **args)
 		perror(path);
 		exit(EXIT_FAILURE);
 	}
-
 	waitpid(pid, &st, 0);
 	if (path != args[0])
 		free(path);
