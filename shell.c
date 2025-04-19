@@ -10,12 +10,13 @@ static int line_count;
 
 /**
  * main - entry point for simple_shell
- * @argc: arg count
- * @argv: arg vector
+ * @argc: argument count (unused)
+ * @argv: argument vector
  * Return: exit status
  */
 int main(int argc, char **argv)
 {
+	(void)argc;
 	int interactive = isatty(STDIN_FILENO);
 	char *line, **args;
 	int status = 0;
@@ -74,7 +75,7 @@ char *read_line(void)
 /**
  * split_line - split line into tokens by whitespace
  * @line: input line
- * Return: NULL-terminated array
+ * Return: NULL‑terminated array
  */
 char **split_line(char *line)
 {
@@ -105,7 +106,7 @@ char **split_line(char *line)
 /**
  * find_path - locate cmd in PATH without getenv
  * @cmd: program name
- * Return: full path or NULL
+ * Return: malloc’d full path or NULL
  */
 char *find_path(char *cmd)
 {
@@ -162,7 +163,7 @@ int execute(char **args)
 	int st;
 	char *path;
 
-	if (strchr(args[0], '/'))
+	if (strchr(args[0], '/') != NULL)
 	{
 		path = args[0];
 		if (access(path, X_OK) != 0)
@@ -197,6 +198,7 @@ int execute(char **args)
 		perror(path);
 		exit(EXIT_FAILURE);
 	}
+
 	waitpid(pid, &st, 0);
 	if (path != args[0])
 		free(path);
