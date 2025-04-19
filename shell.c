@@ -49,12 +49,12 @@ int main(int argc, char **argv)
 			continue;
 		}
 
-		/* implement exit built-in */
+		/* exit built-in: terminate shell with last command status */
 		if (strcmp(args[0], "exit") == 0)
 		{
 			free(args);
 			free(line);
-			exit(EXIT_SUCCESS);
+			exit(status);
 		}
 
 		line_count++;
@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 }
 
 /**
- * read_line - read input line
+ * read_line - read a line from stdin using getline
  * Return: buffer (must be freed) or NULL on EOF
  */
 char *read_line(void)
@@ -85,7 +85,7 @@ char *read_line(void)
 }
 
 /**
- * split_line - split a line into tokens
+ * split_line - split a line into tokens by whitespace
  * @line: input string
  * Return: NULL‑terminated array of tokens
  */
