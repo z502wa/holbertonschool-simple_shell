@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 {
 	int interactive;
 	char *line, **args;
-	int status = 0;
+	int status = 0, i;
 
 	(void)argc;
 	shell_name = argv[0];
@@ -49,7 +49,21 @@ int main(int argc, char **argv)
 			continue;
 		}
 
-		/* exit built-in: terminate shell with last command status */
+		/* env built-in: print current environment */
+		if (strcmp(args[0], "env") == 0)
+		{
+			for (i = 0; environ[i]; i++)
+			{
+				write(STDOUT_FILENO, environ[i],
+				      strlen(environ[i]));
+				write(STDOUT_FILENO, "\n", 1);
+			}
+			free(args);
+			free(line);
+			continue;
+		}
+
+		/* exit built-in: terminate shell with last status */
 		if (strcmp(args[0], "exit") == 0)
 		{
 			free(args);
