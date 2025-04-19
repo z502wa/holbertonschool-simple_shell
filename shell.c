@@ -16,22 +16,25 @@ static int line_count;
  */
 int main(int argc, char **argv)
 {
-	(void)argc;
-	int interactive = isatty(STDIN_FILENO);
+	int interactive;
 	char *line, **args;
 	int status = 0;
 
+	(void)argc;
 	shell_name = argv[0];
 	line_count = 0;
+	interactive = isatty(STDIN_FILENO);
 
 	while (1)
 	{
 		if (interactive)
+		{
 			if (write(STDOUT_FILENO, "$ ", 2) < 0)
 				exit(EXIT_FAILURE);
+		}
 
 		line = read_line();
-		if (!line)
+		if (line == NULL)
 		{
 			if (interactive)
 				write(STDOUT_FILENO, "\n", 1);
@@ -39,16 +42,17 @@ int main(int argc, char **argv)
 		}
 
 		args = split_line(line);
-		free(line);
-		if (!args[0])
+		if (args[0] == NULL)
 		{
 			free(args);
+			free(line);
 			continue;
 		}
 
 		line_count++;
 		status = execute(args);
 		free(args);
+		free(line);
 	}
 
 	return (interactive ? 0 : status);
@@ -56,7 +60,7 @@ int main(int argc, char **argv)
 
 /**
  * read_line - read input line
- * Return: buffer or NULL on EOF
+ * Return: buffer (must be freed) or NULL on EOF
  */
 char *read_line(void)
 {
@@ -73,9 +77,9 @@ char *read_line(void)
 }
 
 /**
- * split_line - split line into tokens by whitespace
- * @line: input line
- * Return: NULL‑terminated array
+ * split_line - split a line into tokens
+ * @line: input string
+ * Return: NULL‑terminated array of tokens
  */
 char **split_line(char *line)
 {
@@ -83,7 +87,7 @@ char **split_line(char *line)
 	char **tok = malloc(bs * sizeof(char *));
 	char *t;
 
-	if (!tok)
+	if (tok == NULL)
 		exit(EXIT_FAILURE);
 
 	t = strtok(line, " \t\n");
@@ -94,7 +98,7 @@ char **split_line(char *line)
 		{
 			bs *= 2;
 			tok = realloc(tok, bs * sizeof(char *));
-			if (!tok)
+			if (tok == NULL)
 				exit(EXIT_FAILURE);
 		}
 		t = strtok(NULL, " \t\n");
@@ -104,9 +108,9 @@ char **split_line(char *line)
 }
 
 /**
- * find_path - locate cmd in PATH without getenv
+ * find_path - locate a command in PATH without getenv
  * @cmd: program name
- * Return: malloc’d full path or NULL
+ * Return: malloc’d full path or NULL if not found
  */
 char *find_path(char *cmd)
 {
@@ -116,18 +120,18 @@ char *find_path(char *cmd)
 
 	while (environ[i])
 	{
-		if (!strncmp(environ[i], "PATH=", 5))
+		if (strncmp(environ[i], "PATH=", 5) == 0)
 		{
 			p = environ[i] + 5;
 			break;
 		}
 		i++;
 	}
-	if (!p)
+	if (p == NULL)
 		return (NULL);
 
 	dup = strdup(p);
-	if (!dup)
+	if (dup == NULL)
 		exit(EXIT_FAILURE);
 
 	dir = strtok(dup, ":");
@@ -135,7 +139,7 @@ char *find_path(char *cmd)
 	{
 		len = strlen(dir) + strlen(cmd) + 2;
 		full = malloc(len);
-		if (!full)
+		if (full == NULL)
 			exit(EXIT_FAILURE);
 		strcpy(full, dir);
 		strcat(full, "/");
@@ -153,8 +157,8 @@ char *find_path(char *cmd)
 }
 
 /**
- * execute - run command via fork and execve
- * @args: args array
+ * execute - fork and exec a command with args
+ * @args: NULL‑terminated args array
  * Return: child exit status or 127 if not found
  */
 int execute(char **args)
@@ -176,7 +180,7 @@ int execute(char **args)
 	else
 	{
 		path = find_path(args[0]);
-		if (!path)
+		if (path == NULL)
 		{
 			fprintf(stderr, "%s: %d: %s: not found\n",
 				shell_name, line_count, args[0]);
