@@ -49,6 +49,14 @@ int main(int argc, char **argv)
 			continue;
 		}
 
+		/* implement exit built-in */
+		if (strcmp(args[0], "exit") == 0)
+		{
+			free(args);
+			free(line);
+			exit(EXIT_SUCCESS);
+		}
+
 		line_count++;
 		status = execute(args);
 		free(args);
