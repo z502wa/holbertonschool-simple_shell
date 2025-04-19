@@ -7,7 +7,7 @@
 
 /**
  * main - entry point for simple_shell
- * Return: 0 on success, or exit on failure
+ * Return: exit status
  */
 int main(void)
 {
@@ -17,22 +17,20 @@ int main(void)
 
 	while (1)
 	{
-		/* display prompt only in interactive mode */
 		if (interactive)
-			if (write(STDOUT_FILENO, "$ ", 2) == -1)
+			if (write(STDOUT_FILENO, "$ ", 2) < 0)
 				exit(EXIT_FAILURE);
 
 		line = read_line();
-		if (line == NULL)
+		if (!line)
 		{
-			/* handle EOF (Ctrl+D) */
 			if (interactive)
 				write(STDOUT_FILENO, "\n", 1);
 			break;
 		}
 
 		args = split_line(line);
-		if (args[0] == NULL)
+		if (!args[0])
 		{
 			free(args);
 			free(line);
@@ -49,163 +47,132 @@ int main(void)
 }
 
 /**
- * read_line - read a line of input using getline
- * Return: pointer to buffer (must be freed), or NULL on EOF
+ * read_line - read input line
+ * Return: buffer or NULL on EOF
  */
 char *read_line(void)
 {
-	char *buffer = NULL;
-	size_t bufsize = 0;
-	ssize_t len;
+	char *buf = NULL;
+	size_t sz = 0;
+	ssize_t r = getline(&buf, &sz, stdin);
 
-	len = getline(&buffer, &bufsize, stdin);
-	if (len == -1)
+	if (r < 0)
 	{
-		free(buffer);
+		free(buf);
 		return (NULL);
 	}
-
-	return (buffer);
+	return (buf);
 }
 
 /**
- * split_line - trim newline and split into tokens
- * @line: input string
- * Return: NULL-terminated array of pointers to tokens
+ * split_line - split line into tokens by whitespace
+ * @line: input line
+ * Return: NULL-terminated array
  */
 char **split_line(char *line)
 {
-	size_t bufsize = 64, pos = 0;
-	char **tokens = malloc(bufsize * sizeof(char *));
-	char *token;
-	size_t len;
+	size_t bs = 64, pos = 0;
+	char **tok = malloc(bs * sizeof(char *));
+	char *t;
 
-	if (tokens == NULL)
-	{
-		perror("malloc");
+	if (!tok)
 		exit(EXIT_FAILURE);
-	}
 
-	/* trim trailing newline */
-	len = strlen(line);
-	if (len > 0 && line[len - 1] == '\n')
-		line[len - 1] = '\0';
-
-	token = strtok(line, " \t");
-	while (token)
+	t = strtok(line, " \t\n");
+	while (t)
 	{
-		tokens[pos++] = token;
-		if (pos >= bufsize)
+		tok[pos++] = t;
+		if (pos >= bs)
 		{
-			bufsize *= 2;
-			tokens = realloc(tokens, bufsize * sizeof(char *));
-			if (tokens == NULL)
-			{
-				perror("realloc");
+			bs *= 2;
+			tok = realloc(tok, bs * sizeof(char *));
+			if (!tok)
 				exit(EXIT_FAILURE);
-			}
 		}
-		token = strtok(NULL, " \t");
+		t = strtok(NULL, " \t\n");
 	}
-	tokens[pos] = NULL;
-	return (tokens);
+	tok[pos] = NULL;
+	return (tok);
 }
 
 /**
- * find_path - search for cmd in PATH environment
- * @cmd: command name (no slashes)
- * Return: full path (malloc'd) or NULL if not found
+ * find_path - locate cmd in PATH without getenv
+ * @cmd: program name
+ * Return: full path or NULL
  */
 char *find_path(char *cmd)
 {
-	char *path_env, *path_dup, *dir, *full;
+	int i = 0;
+	char *path = NULL, *dup, *dir, *full;
 	size_t len;
 
-	path_env = getenv("PATH");
-	if (path_env == NULL)
+	while (environ[i])
+	{
+		if (!strncmp(environ[i], "PATH=", 5))
+		{
+			path = environ[i] + 5;
+			break;
+		}
+		i++;
+	}
+	if (!path)
 		return (NULL);
 
-	path_dup = strdup(path_env);
-	if (path_dup == NULL)
+	dup = strdup(path);
+	if (!dup)
 		exit(EXIT_FAILURE);
 
-	dir = strtok(path_dup, ":");
+	dir = strtok(dup, ":");
 	while (dir)
 	{
-		len = strlen(dir) + 1 + strlen(cmd) + 1;
+		len = strlen(dir) + strlen(cmd) + 2;
 		full = malloc(len);
-		if (full == NULL)
+		if (!full)
 			exit(EXIT_FAILURE);
 		strcpy(full, dir);
 		strcat(full, "/");
 		strcat(full, cmd);
-		if (access(full, X_OK) == 0)
+		if (!access(full, X_OK))
 		{
-			free(path_dup);
+			free(dup);
 			return (full);
 		}
 		free(full);
 		dir = strtok(NULL, ":");
 	}
-
-	free(path_dup);
+	free(dup);
 	return (NULL);
 }
 
 /**
- * execute - fork and execve the given command
- * @args: NULL-terminated array of command and arguments
- * Return: exit status of child, or -1 on error/no fork
+ * execute - run command via fork and execve
+ * @args: args array
+ * Return: child exit status or -1
  */
 int execute(char **args)
 {
-	char *cmd_path;
 	pid_t pid;
-	int status;
+	int st;
+	char *path = strchr(args[0], '/') ? args[0] : find_path(args[0]);
 
-	/* decide full path: direct or via PATH */
-	if (strchr(args[0], '/'))
+	if (!path || (strchr(args[0], '/') && access(path, X_OK)))
 	{
-		cmd_path = args[0];
-		if (access(cmd_path, X_OK) != 0)
-		{
-			perror(cmd_path);
-			return (-1);
-		}
-	}
-	else
-	{
-		cmd_path = find_path(args[0]);
-		if (cmd_path == NULL)
-		{
-			fprintf(stderr, "%s: not found\n", args[0]);
-			return (-1);
-		}
-	}
-
-	pid = fork();
-	if (pid == -1)
-	{
-		perror("fork");
-		if (cmd_path != args[0])
-			free(cmd_path);
+		fprintf(stderr, "%s: not found\n", args[0]);
 		return (-1);
 	}
 
-	if (pid == 0)
+	pid = fork();
+	if (pid < 0)
 	{
-		/* child process */
-		execve(cmd_path, args, environ);
-		perror(cmd_path);
+		perror("fork");
+		return (-1);
+	}
+	if (!pid)
+	{
+		execve(path, args, environ);
+		perror(path);
 		exit(EXIT_FAILURE);
 	}
-
-	/* parent waits for child */
-	waitpid(pid, &status, 0);
-	if (cmd_path != args[0])
-		free(cmd_path);
-	if (WIFEXITED(status))
-		return (WEXITSTATUS(status));
-
-	return (status);
+	waitpid(pid, &st, 0);
+	return (WIFEXITED(st) ? WEXITSTATUS(st) : st);
 }
