@@ -103,22 +103,22 @@ char **split_line(char *line)
 char *find_path(char *cmd)
 {
 	int i = 0;
-	char *path = NULL, *dup, *dir, *full;
+	char *p = NULL, *dup, *dir, *full;
 	size_t len;
 
 	while (environ[i])
 	{
 		if (!strncmp(environ[i], "PATH=", 5))
 		{
-			path = environ[i] + 5;
+			p = environ[i] + 5;
 			break;
 		}
 		i++;
 	}
-	if (!path)
+	if (!p)
 		return (NULL);
 
-	dup = strdup(path);
+	dup = strdup(p);
 	if (!dup)
 		exit(EXIT_FAILURE);
 
@@ -165,6 +165,8 @@ int execute(char **args)
 	if (pid < 0)
 	{
 		perror("fork");
+		if (path != args[0])
+			free(path);
 		return (-1);
 	}
 	if (!pid)
@@ -174,5 +176,7 @@ int execute(char **args)
 		exit(EXIT_FAILURE);
 	}
 	waitpid(pid, &st, 0);
+	if (path != args[0])
+		free(path);
 	return (WIFEXITED(st) ? WEXITSTATUS(st) : st);
 }
