@@ -1,48 +1,36 @@
-.\" Manpage for simple_shell
-.TH SIMPLE_SHELL 1 "April 2025" "simple_shell 1.0" "User Commands"
+.\" Manpage for hsh
+.TH HSH 1 "April 23, 2025" "Version 1.0" "User Commands"
 .SH NAME
-simple_shell \- a simple UNIX command interpreter
+hsh \- minimal UNIX command-line interpreter
 .SH SYNOPSIS
-.B simple_shell
-[\fIOPTION\fR]
+.B hsh
+[\fIcommand [arguments]\fR]
 .SH DESCRIPTION
-.B simple_shell
-is a minimal shell implementing basic features of \fBin/sh\fR:
-.IP "\- Interactive mode"
-Read commands from standard input and execute them.
-.IP "\- Non-interactive mode"
-Read commands from a file or pipe and execute them.
-.SH OPTIONS
+hsh is a simple POSIX-compliant shell that reads and executes commands
+from standard input in both interactive and non-interactive modes. It:
+.IP "\(bu" 2
+Displays a prompt (`$ `) when standard input is a terminal.
+.IP "\(bu" 2
+Parses a command line into a program name and its arguments.
+.IP "\(bu" 2
+Searches for executables in the PATH environment variable if the
+command name contains no slash (`/`).
+.IP "\(bu" 2
+Supports two built-in commands: `env` and `exit`.
+.IP "\(bu" 2
+Exits cleanly on end-of-file (Ctrl+D).
+.SH BUILTIN COMMANDS
 .TP
-.B none
-No options supported in this version.
-.SH USAGE
-.IP
-Run without arguments in interactive mode:
-.RS
-.nf
-\$ ./simple_shell
-(\$) /bin/ls
-file1 file2
-(\$) exit
-.fi
-.RE
-.IP
-Run with piped input:
-.RS
-.nf
-\$ echo "/bin/ls" | ./simple_shell
-file1 file2
-.fi
-.RE
+.B env
+Prints all current environment variables, one per line in `KEY=value` format.
+.TP
+.B exit
+Exits the shell, returning the exit status of the last executed command.
 .SH EXIT STATUS
-Returns the exit status of the last command executed, or 0 on success.
-.SH AUTHORS
-Project developed by Holberton School students:
-.RS
-.nf
-See AUTHORS file.
-.fi
-.RE
+hsh returns the exit status of the last command executed, or 0 if no
+commands were run (in interactive mode).
+.SH AUTHOR
+Suahil Alaboud  
+Khalid Aldawsari
 .SH COPYRIGHT
 Public domain.
